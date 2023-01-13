@@ -19,6 +19,7 @@
 	extern	_TRISIO
 	extern	_CMCON
 	extern	_GPIO
+	extern	_GPIObits
 	extern	__sdcc_gsinit_startup
 ;--------------------------------------------------------
 ; global declarations
@@ -71,6 +72,9 @@ STK00	res 1
 ; compiler-defined variables
 ;--------------------------------------------------------
 UDL_blink_0	udata
+r0x1008	res	1
+r0x1009	res	1
+r0x100A	res	1
 r0x1001	res	1
 r0x1000	res	1
 r0x1002	res	1
@@ -109,49 +113,338 @@ code_blink	code
 ;   _delay
 ;   _delay
 ;   _delay
-;1 compiler assigned register :
+;   _delay
+;   _delay
+;   _delay
+;   _delay
+;   _delay
+;   _delay
+;   _delay
+;   _delay
+;4 compiler assigned registers:
+;   r0x1008
+;   r0x1009
+;   r0x100A
 ;   STK00
 ;; Starting pCode block
 S_blink__main	code
 _main:
 ; 2 exit points
-;	.line	17; "blink.c"	TRISIO = 0b00000000; // Poner todos los pines como salidas
+;	.line	13; "blink.c"	TRISIO = 0b00000000; 		// Poner todos los pines como salidas 
 	BANKSEL	_TRISIO
 	CLRF	_TRISIO
-;	.line	18; "blink.c"	GPIO = 0x00;		 // Poner pines en bajo; terminales en 0
+;	.line	14; "blink.c"	GPIO = 0b00100000;   		// Poner pines en bajo; terminales en 0
+	MOVLW	0x20
 	BANKSEL	_GPIO
-	CLRF	_GPIO
-;	.line	19; "blink.c"	ANSEL = 0;			 // Canales analogicos como E/S digitales
+	MOVWF	_GPIO
+;	.line	15; "blink.c"	ANSEL = 0;			 		// Canales analogicos como E/S digitales
 	BANKSEL	_ANSEL
 	CLRF	_ANSEL
-;	.line	20; "blink.c"	CMCON = 0x07;			 // Apagar comparadores
+;	.line	16; "blink.c"	CMCON = 0x07;			    // Apagar comparadores
 	MOVLW	0x07
 	BANKSEL	_CMCON
 	MOVWF	_CMCON
-_00106_DS_:
-;	.line	27; "blink.c"	GPIO = 0x00;
-	BANKSEL	_GPIO
-	CLRF	_GPIO
-;	.line	29; "blink.c"	delay(time); // Para imprimir delay entre cada tiro
-	MOVLW	0x64
+;	.line	22; "blink.c"	unsigned int counter = 1;	// se define contador
+	MOVLW	0x01
+	MOVWF	r0x1008
+	CLRF	r0x1009
+_00125_DS_:
+;	.line	25; "blink.c"	if (GP5 == 0x01){     // Hacemos el contador para que sostenga un  número 
+	CLRF	r0x100A
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,5
+	INCF	r0x100A,F
+	MOVF	r0x100A,W
+	XORLW	0x01
+	BTFSS	STATUS,2
+	GOTO	_00122_DS_
+;	.line	26; "blink.c"	counter ++;
+	INCF	r0x1008,F
+	BTFSC	STATUS,2
+	INCF	r0x1009,F
+;	.line	27; "blink.c"	if (counter == 7){  //número aleatorio enfrascado entre 1 y 6
+	MOVF	r0x1008,W
+	XORLW	0x07
+	BTFSS	STATUS,2
+	GOTO	_00125_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00125_DS_
+;	.line	29; "blink.c"	counter ++;
+	MOVLW	0x01
+	MOVWF	r0x1008
+	CLRF	r0x1009
+	GOTO	_00125_DS_
+_00122_DS_:
+;	.line	31; "blink.c"	} else { if (GP5 == 0x00){ // Al presionar bottón se configura la salida de los leds
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,5
+	GOTO	_00125_DS_
+;	.line	32; "blink.c"	if (counter == 1){      // Para mostrar el uno en la configuración de leds
+	MOVF	r0x1008,W
+	XORLW	0x01
+	BTFSS	STATUS,2
+	GOTO	_00108_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00108_DS_
+;	.line	33; "blink.c"	GP1 = ~GP1;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,1
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,1
+	BTFSC	STATUS,0
+	BSF	_GPIObits,1
+;	.line	34; "blink.c"	delay(time1);		// Llamada a condición de espera
+	MOVLW	0x96
 	MOVWF	STK00
 	MOVLW	0x00
 	PAGESEL	_delay
 	CALL	_delay
 	PAGESEL	$
-;	.line	30; "blink.c"	GPIO = 0b00111111;
-	MOVLW	0x3f
+;	.line	35; "blink.c"	GPIO = 0x20;
+	MOVLW	0x20
 	BANKSEL	_GPIO
 	MOVWF	_GPIO
-;	.line	33; "blink.c"	delay(time);
-	MOVLW	0x64
+_00108_DS_:
+;	.line	37; "blink.c"	} if (counter == 2){    // Para mostrar el dos en la configuración de leds
+	MOVF	r0x1008,W
+	XORLW	0x02
+	BTFSS	STATUS,2
+	GOTO	_00110_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00110_DS_
+;	.line	38; "blink.c"	GP2 = ~GP2;
+	CLRF	r0x100A
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,2
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,2
+	BTFSC	STATUS,0
+	BSF	_GPIObits,2
+;	.line	39; "blink.c"	delay(time1);
+	MOVLW	0x96
 	MOVWF	STK00
 	MOVLW	0x00
 	PAGESEL	_delay
 	CALL	_delay
 	PAGESEL	$
-	GOTO	_00106_DS_
-;	.line	35; "blink.c"	}
+;	.line	40; "blink.c"	GPIO = 0x20;
+	MOVLW	0x20
+	BANKSEL	_GPIO
+	MOVWF	_GPIO
+_00110_DS_:
+;	.line	42; "blink.c"	} if (counter == 3){    // Para mostrar el tres en la configuración de leds
+	MOVF	r0x1008,W
+	XORLW	0x03
+	BTFSS	STATUS,2
+	GOTO	_00112_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00112_DS_
+;	.line	43; "blink.c"	GP2 = ~GP2;
+	CLRF	r0x100A
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,2
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,2
+	BTFSC	STATUS,0
+	BSF	_GPIObits,2
+;	.line	44; "blink.c"	GP1 = ~GP1;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,1
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,1
+	BTFSC	STATUS,0
+	BSF	_GPIObits,1
+;	.line	45; "blink.c"	delay(time1);
+	MOVLW	0x96
+	MOVWF	STK00
+	MOVLW	0x00
+	PAGESEL	_delay
+	CALL	_delay
+	PAGESEL	$
+;	.line	46; "blink.c"	GPIO = 0x20;
+	MOVLW	0x20
+	BANKSEL	_GPIO
+	MOVWF	_GPIO
+_00112_DS_:
+;	.line	48; "blink.c"	} if (counter == 4){    // Para mostrar el cuatro en la configuración de leds
+	MOVF	r0x1008,W
+	XORLW	0x04
+	BTFSS	STATUS,2
+	GOTO	_00114_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00114_DS_
+;	.line	49; "blink.c"	GP0 = ~GP0;
+	CLRF	r0x100A
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,0
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,0
+	BTFSC	STATUS,0
+	BSF	_GPIObits,0
+;	.line	50; "blink.c"	GP2 = ~GP2;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,2
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,2
+	BTFSC	STATUS,0
+	BSF	_GPIObits,2
+;	.line	51; "blink.c"	delay(time1);
+	MOVLW	0x96
+	MOVWF	STK00
+	MOVLW	0x00
+	PAGESEL	_delay
+	CALL	_delay
+	PAGESEL	$
+;	.line	52; "blink.c"	GPIO = 0x20;
+	MOVLW	0x20
+	BANKSEL	_GPIO
+	MOVWF	_GPIO
+_00114_DS_:
+;	.line	54; "blink.c"	} if (counter == 5){   // Para mostrar el cinco en la configuración de leds
+	MOVF	r0x1008,W
+	XORLW	0x05
+	BTFSS	STATUS,2
+	GOTO	_00116_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00116_DS_
+;	.line	55; "blink.c"	GP0 = ~GP0;
+	CLRF	r0x100A
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,0
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,0
+	BTFSC	STATUS,0
+	BSF	_GPIObits,0
+;	.line	56; "blink.c"	GP1 = ~GP1;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,1
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,1
+	BTFSC	STATUS,0
+	BSF	_GPIObits,1
+;	.line	57; "blink.c"	GP2 = ~GP2;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,2
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,2
+	BTFSC	STATUS,0
+	BSF	_GPIObits,2
+;	.line	58; "blink.c"	delay(time1);
+	MOVLW	0x96
+	MOVWF	STK00
+	MOVLW	0x00
+	PAGESEL	_delay
+	CALL	_delay
+	PAGESEL	$
+;	.line	59; "blink.c"	GPIO = 0x20;
+	MOVLW	0x20
+	BANKSEL	_GPIO
+	MOVWF	_GPIO
+_00116_DS_:
+;	.line	61; "blink.c"	} if (counter == 6){    // Para mostrar el seis en la configuración de leds
+	MOVF	r0x1008,W
+	XORLW	0x06
+	BTFSS	STATUS,2
+	GOTO	_00125_DS_
+	MOVF	r0x1009,W
+	XORLW	0x00
+	BTFSS	STATUS,2
+	GOTO	_00125_DS_
+;	.line	62; "blink.c"	GP0 = ~GP0;
+	CLRF	r0x100A
+	BANKSEL	_GPIObits
+	BTFSC	_GPIObits,0
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,0
+	BTFSC	STATUS,0
+	BSF	_GPIObits,0
+;	.line	63; "blink.c"	GP2 = ~GP2;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,2
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,2
+	BTFSC	STATUS,0
+	BSF	_GPIObits,2
+;	.line	64; "blink.c"	GP4 = ~GP4;
+	CLRF	r0x100A
+	BTFSC	_GPIObits,4
+	INCF	r0x100A,F
+	COMF	r0x100A,W
+	MOVWF	r0x100A
+	RRF	r0x100A,W
+	BTFSS	STATUS,0
+	BCF	_GPIObits,4
+	BTFSC	STATUS,0
+	BSF	_GPIObits,4
+;	.line	65; "blink.c"	delay(time1);
+	MOVLW	0x96
+	MOVWF	STK00
+	MOVLW	0x00
+	PAGESEL	_delay
+	CALL	_delay
+	PAGESEL	$
+;	.line	66; "blink.c"	GPIO = 0x20;
+	MOVLW	0x20
+	BANKSEL	_GPIO
+	MOVWF	_GPIO
+	GOTO	_00125_DS_
+;	.line	72; "blink.c"	}
 	RETURN	
 ; exit point of _main
 
@@ -173,30 +466,30 @@ _00106_DS_:
 S_blink__delay	code
 _delay:
 ; 2 exit points
-;	.line	37; "blink.c"	void delay(unsigned int tiempo) // Función para imprimir delay
+;	.line	74; "blink.c"	void delay(unsigned int tiempo) // Función para imprimir delay (Dos loops for)
 	MOVWF	r0x1000
 	MOVF	STK00,W
 	MOVWF	r0x1001
-;	.line	42; "blink.c"	for (i = 0; i < tiempo; i++)
+;	.line	79; "blink.c"	for (i = 0; i < tiempo; i++)
 	CLRF	r0x1002
 	CLRF	r0x1003
-_00117_DS_:
+_00136_DS_:
 	MOVF	r0x1000,W
 	SUBWF	r0x1003,W
 	BTFSS	STATUS,2
-	GOTO	_00138_DS_
+	GOTO	_00157_DS_
 	MOVF	r0x1001,W
 	SUBWF	r0x1002,W
-_00138_DS_:
+_00157_DS_:
 	BTFSC	STATUS,0
-	GOTO	_00119_DS_
-;;genSkipc:3307: created from rifx:0x7ffcb0cf0d90
-;	.line	43; "blink.c"	for (j = 0; j < 1275; j++)
+	GOTO	_00138_DS_
+;;genSkipc:3307: created from rifx:0x7ffdb6b6ed00
+;	.line	80; "blink.c"	for (j = 0; j < 1275; j++)
 	MOVLW	0xfb
 	MOVWF	r0x1004
 	MOVLW	0x04
 	MOVWF	r0x1005
-_00115_DS_:
+_00134_DS_:
 	MOVLW	0xff
 	ADDWF	r0x1004,W
 	MOVWF	r0x1006
@@ -213,19 +506,19 @@ _00115_DS_:
 	MOVF	r0x1007,W
 	IORWF	r0x1006,W
 	BTFSS	STATUS,2
-	GOTO	_00115_DS_
-;	.line	42; "blink.c"	for (i = 0; i < tiempo; i++)
+	GOTO	_00134_DS_
+;	.line	79; "blink.c"	for (i = 0; i < tiempo; i++)
 	INCF	r0x1002,F
 	BTFSC	STATUS,2
 	INCF	r0x1003,F
-	GOTO	_00117_DS_
-_00119_DS_:
-;	.line	45; "blink.c"	}
+	GOTO	_00136_DS_
+_00138_DS_:
+;	.line	82; "blink.c"	}
 	RETURN	
 ; exit point of _delay
 
 
 ;	code size estimation:
-;	   57+   10 =    67 instructions (  154 byte)
+;	  278+   29 =   307 instructions (  672 byte)
 
 	end
