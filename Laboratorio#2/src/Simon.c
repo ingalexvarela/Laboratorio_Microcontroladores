@@ -3,6 +3,7 @@
 #include <util/delay.h>
 #include <stdlib.h> // para usar la función rand()
 
+
 // Volatile variables to indicate button presses
 volatile uint8_t button1_press = 0;
 volatile uint8_t button2_press = 0;
