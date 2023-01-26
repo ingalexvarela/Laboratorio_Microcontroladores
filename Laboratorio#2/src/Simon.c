@@ -29,6 +29,7 @@ uint8_t game_input_index = 0; // Current index of the user input
 // void check_user_input(uint8_t button);
 //void generate_sequence();
 uint8_t game_initiated = 0; // Variable auxiliar para registrar si el juego ha sido iniciado
+uint8_t game_initial = 0; // Variable auxiliar para registrar para corregir un error
 
 
 // Function to generate the next number in the LFSR
@@ -85,23 +86,24 @@ void play_sequence()
 }
 
 void check_user_input(uint8_t button)
-{
+{   
     if (game_sequence[game_input_index] == button)
     {
-        game_input_index++;
-        if (game_input_index == 4)
-        {
+	     game_input_index++;
+          if (game_input_index == 4)
+          {
           // Completo con exito
 		game_started = 1; 
 		game_initiated = 0;  
 		// Ir a Segundo estado
-        }
+           }
     }
     else
     {   
         //perdio 
         game_over = 1;
 	   // Ir a Tercer estado
+
     }
 }
 
@@ -109,51 +111,51 @@ void check_user_input(uint8_t button)
 // Interrupciones externas de los botones
 ISR(INT0_vect)
 {
-    button1_press = 1; // Establecer la bandera de presión del botón D2
+    button1_press = 1; // Establecer la bandera de presión del botón D2 maneja B7
     PORTB |= (1 << 7);
-   //check_user_input(button1_press);
+    check_user_input(0);
     _delay_ms(2000);
     PORTB &= ~(1 << 7); //_delay_ms(1000);
-    if (game_started == 1){
-    check_user_input(0); //button1_press);
-    }	
+    //if (game_started == 1){
+    //check_user_input(0); //button1_press);
+    //}	
 }
 
 ISR(INT1_vect)
 {
-    button2_press = 1; // Establecer la bandera de presión del botón D3
+    button2_press = 1; // Establecer la bandera de presión del botón D3 maneja B6
     PORTB |= (1 << 6);
-    //check_user_input(button2_press);
+    check_user_input(1);
     _delay_ms(2000);
     PORTB &= ~(1 << 6); //_delay_ms(1000);
 
-    if (game_started == 1){
-    check_user_input(1);//button2_press);
-    }	
+    //if (game_started == 1){
+    //check_user_input(1);//button2_press);
+    //}	
 }
 
 ISR(PCINT2_vect)
 {
-    button3_press = 1; // Establecer la bandera de presión del botón D4
+    button3_press = 1; // Establecer la bandera de presión del botón D4  maneja B1
     PORTB |= (1 << 1);
-    //check_user_input(button3_press);
+    check_user_input(2);
     _delay_ms(2000);
     PORTB &= ~(1 << 1); //_delay_ms(1000);
-    if (game_started == 1){
-    check_user_input(2);//button3_press);
-    }	
+    //if (game_started == 1){
+    //check_user_input(2);//button3_press);
+    //}	
 }
 
 ISR(PCINT1_vect)
 {
-    button4_press = 1; // Establecer la bandera de presión del botón A0
+    button4_press = 1; // Establecer la bandera de presión del botón A0 maneja BO
     PORTB |= (1 << 0);
-    //check_user_input(button4_press);
+    check_user_input(3);
     _delay_ms(2000);
     PORTB &= ~(1 << 0); //_delay_ms(1000);
-    if (game_started == 1){
-    check_user_input(3);//button4_press);
-    }	
+    //if (game_started == 1){
+    //check_user_input(3);//button4_press);
+    //}	
 }
 
 
@@ -176,47 +178,53 @@ int main()
     {
         // Primer estado (Inicio)
         if (game_started == 0)
-        {
-            if (button1_press || button2_press || button3_press || button4_press)
+        {   if (game_initial == 0)
             {
-                for (int i = 0; i < 2; i++)
-                { // parpadear los LEDS 2 veces
-                    PORTB = 0xc3;
-                    _delay_ms(5000); // esperar 500ms
-                    PORTB = 0x00;    // apagar todos los LEDS
-                    _delay_ms(5000); // esperar 500ms
-                }
-                button1_press = 0; // resetear la bandera de presión del botón D2
-                button2_press = 0; // resetear la bandera de presión del botón D3
-                button3_press = 0; // resetear la bandera de presión del botón D4
-                button4_press = 0; // resetear la bandera de presión del botón A0
-                game_started = 1;  // resetear la bandera de fin del juego
-			game_input_index = 0;
-            }
+            	if (button1_press || button2_press || button3_press || button4_press)
+            	{
+                	for (int i = 0; i < 2; i++)
+	                { // parpadear los LEDS 2 veces
+	                    PORTB = 0xc3;
+	                    _delay_ms(5000); // esperar 500ms
+	                    PORTB = 0x00;    // apagar todos los LEDS
+	                    _delay_ms(5000); // esperar 500ms
+	                }
+                	button1_press = 0; // resetear la bandera de presión del botón D2
+	                button2_press = 0; // resetear la bandera de presión del botón D3
+	                button3_press = 0; // resetear la bandera de presión del botón D4
+	                button4_press = 0; // resetear la bandera de presión del botón A0
+	                game_started = 1;  // resetear la bandera de fin del juego
+				game_initiated = 0;
+            	}
+		 }
         }
 
         // Segundo estado (arranque de funciones)
         if (game_started == 1 && game_initiated == 0)
-        {
+        {   //game_input_index = 0;
             generate_sequence();
             play_sequence();
-            game_initiated = 1; // Actualizar la variable auxiliar para indicar que el juego ha sido iniciado
-            //game_started  = 0;
-		 //game_over = 1;
+            game_initiated = 1; 
+		  game_initial = 1;
+		  game_started = 1;
         }
         // tercer estado (Fin del juego)
         if (game_over == 1)
         { // si el usuario se equivocó
             for (int i = 0; i < 3; i++)
             { // parpadear los LEDS 3 veces
-                PORTB = 0x03;
+                PORTB = 0xC3;
                 _delay_ms(5000); // esperar 500ms
                 PORTB = 0x00;    // apagar todos los LEDS
                 _delay_ms(5000); // esperar 500ms
             }
             game_over = 0;    // resetear la bandera de fin del juego	
             game_started = 0; // resetear la bandera de inicio del juego
-		  //game_initiated = 0;
+		  game_initial = 0;
+		  button1_press = 0; // resetear la bandera de presión del botón D2
+            button2_press = 0; // resetear la bandera de presión del botón D3
+            button3_press = 0; // resetear la bandera de presión del botón D4
+            button4_press = 0; // resetear la bandera de presión del botón A0
         }
     }
     return 0;
